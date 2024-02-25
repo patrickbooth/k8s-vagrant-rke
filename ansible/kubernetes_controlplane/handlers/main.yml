@@ -1,0 +1,7 @@
+---
+# handlers file for kubernetes
+
+- name: Reload Firewalld
+  ansible.builtin.service:
+    name: firewalld
+    state: reloaded

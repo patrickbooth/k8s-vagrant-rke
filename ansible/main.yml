@@ -1,0 +1,15 @@
+- hosts: haproxy_nodes
+  become: true
+  roles:
+    - haproxy
+
+- hosts: kubernetes_worker_nodes
+  become: true
+  roles:
+    - kubernetes_workers
+
+- hosts: kubernetes_controlplane
+  become: true
+  roles:
+    - kubernetes_controlplane
+

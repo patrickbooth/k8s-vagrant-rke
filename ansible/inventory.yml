@@ -1,0 +1,22 @@
+haproxy_nodes:
+  hosts:
+    haproxy1:
+      ansible_host: 172.16.100.101
+      instance_state: MASTER
+      network_interface: eth1
+    haproxy2:
+      ansible_host: 172.16.100.102
+      instance_state: BACKUP
+      network_interface: eth1
+
+kubernetes_controlplane:
+  hosts:
+    controlplane:
+      ansible_host: 172.16.100.110
+
+kubernetes_worker_nodes:
+  hosts:
+    workernode1:
+      ansible_host: 172.16.100.111
+    workernode2:
+      ansible_host: 172.16.100.112

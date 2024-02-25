@@ -1,0 +1,11 @@
+---
+# defaults file for haproxy
+
+# Keepalived instance state MASTER or BACKUP
+instance_state: 'MASTER'
+
+# Priority for keepalived instances
+instance_priority: "{{ '100' if instance_state == 'MASTER' else '99' }}"
+
+# Specify network interface
+network_interface: eth0

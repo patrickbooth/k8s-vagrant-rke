@@ -1,0 +1,36 @@
+---
+# tasks file for haproxy
+- name: Install Packages
+  ansible.builtin.dnf:
+    name:
+      - haproxy
+      - keepalived
+    state: latest
+
+- name: Configure HAProxy
+  ansible.builtin.template:
+    src: "files/haproxy.cfg"
+    dest: "/etc/haproxy/haproxy.cfg"
+  notify:
+    - Restart HAProxy # Call the handler
+
+- name: Configure Keepalived Proxy
+  ansible.builtin.template:
+    src: "templates/keepalived.conf.j2"
+    dest: "/etc/keepalived/keepalived.conf"
+  notify:
+    - Restart keepalived # Call the handler
+
+- name: Permit port http/https traffic
+  ansible.posix.firewalld:
+    port: "{{ item }}"
+    permanent: yes
+    state: enabled
+  notify:
+    - Reload Firewalld # Call the handler
+  loop: 
+    - 53/tcp
+    - 53/udp
+    - 80/tcp
+    - 443/tcp
+

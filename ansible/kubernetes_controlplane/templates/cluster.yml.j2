@@ -1,0 +1,37 @@
+# Set the name of the Kubernetes cluster
+cluster_name: k8s
+
+# will take precedence over kubernetes_version.
+kubernetes_version: v1.27.10-rancher1-1
+
+# Enable running cri-dockerd
+enable_cri_dockerd: true
+
+# Node configuration and roles
+nodes:
+    - address: {{ hostvars['controlplane'].ansible_host }}
+      user: vagrant
+      role:
+        - controlplane
+        - etcd
+    - address: {{ hostvars['workernode1'].ansible_host }}
+      user: vagrant
+      role:
+        - worker
+    - address: {{ hostvars['workernode2'].ansible_host }}
+      user: vagrant
+      role:
+        - worker
+
+# Cluster level SSH private key
+ssh_key_path: /home/vagrant/.ssh/id_vagrant
+
+# To disable ingress controller, set `provider: none`
+ingress:
+  provider: nginx
+
+network:
+  plugin: canal # default is canal, calico preferred but causes DNS problems
+  options:
+    # Configure interface to use for Canal
+    canal_iface: eth1

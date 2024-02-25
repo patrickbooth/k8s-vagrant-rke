@@ -1,0 +1,5 @@
+# Ignore SSH keys
+ssh_keys/*
+
+# Ignore Vagrant boxes
+.vagrant/*

@@ -1,0 +1,127 @@
+---
+# tasks file for kubernetes
+
+#
+# Configure node for kubernetes
+- name: Unmount swapfile
+  ansible.posix.mount: 
+    name: "{{ item }}"
+    fstype: swap
+    state: absent
+  with_items:
+    - swap
+- name: Disable swap
+  ansible.builtin.command: swapoff -a
+  when: ansible_swaptotal_mb > 0
+
+- name: Add br_netfilter kernel module
+  community.general.modprobe:
+    name: br_netfilter
+    state: present
+- name: Add overlay kernel module
+  community.general.modprobe:
+    name: overlay
+    state: present
+- name: Configure k8s for system modules
+  ansible.builtin.copy:
+    content: |
+      br_netfilter
+      overlay
+    dest: /etc/modules-load.d/k8s.conf
+
+- name: Fix net.bridge.bridge-nf-call-iptables issue
+  ansible.builtin.copy:
+    content: |
+      net.bridge.bridge-nf-call-iptables  = 1
+      net.bridge.bridge-nf-call-ip6tables = 1
+      net.ipv4.ip_forward                 = 1
+    dest: /etc/sysctl.d/k8s.conf
+  register: fix
+- name: Update kernel params
+  ansible.builtin.command: sysctl --system
+  when: fix.changed
+
+- name: Set SELinux to permissive mode
+  ansible.posix.selinux:
+    policy: targeted
+    state: permissive
+
+#
+# Configure firewall
+- name: Configure firewall
+  ansible.posix.firewalld:
+    port: "{{ item }}"
+    permanent: yes
+    state: enabled
+  notify:
+    - Reload Firewalld # Call the handler
+  loop: 
+    - 53/tcp # DNS
+    - 53/udp # DNS
+    - 80/tcp # HTTP
+    - 179/tcp # calico networking (BGP)
+    - 443/tcp # HTTPS
+    - 2376/tcp # Rancher
+    - 4789/udp
+    - 3389/tcp # Remote access
+    - 8472/udp # Flannel network
+    - 9099/tcp # Flannel network
+    - 9153/tcp # DNS
+    - 10250/tcp # kubelet
+    - 10254/tcp # Ingress 
+    - 30000-32767/tcp # NodePort services
+    - 30000-32767/udp # NodePort services
+- ansible.posix.firewalld:
+    masquerade: true
+    state: enabled
+    permanent: true
+    zone: public
+  notify:
+    - Reload Firewalld # Call the handler
+
+#
+# install packages
+- name: Install dnf-utils
+  ansible.builtin.dnf:
+    name:
+      - dnf-utils
+    state: latest
+- name: Add docker repo
+  ansible.builtin.command: dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+- name: Install docker
+  ansible.builtin.dnf:
+    name:
+      - docker-ce-3:24* # latest supported RKE version
+      - docker-ce-cli
+      - containerd.io
+    state: latest
+  retries: 3
+  delay: 3
+
+- name: Start & enable docker
+  ansible.builtin.service:
+    name: docker
+    enabled: true
+    state: started
+- name: Enable containerd
+  ansible.builtin.service:
+    name: containerd
+    enabled: true
+
+- name: Add the vagrant user to docker group
+  ansible.builtin.user:
+    name: vagrant
+    state: present
+    groups: docker
+
+#
+# configure containerd
+# this command has been written as a shell script as using ansible's .command function did not yield positive results
+- name: Configure containerd to use SystemdCgroup
+  ansible.builtin.shell: | 
+    containerd config default > /etc/containerd/config.toml
+    sed -i 's/SystemdCgroup \= false/SystemdCgroup \= true/g' /etc/containerd/config.toml
+    systemctl restart containerd
+  args:
+    executable: /bin/bash
+ 

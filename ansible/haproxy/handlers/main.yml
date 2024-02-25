@@ -1,0 +1,16 @@
+---
+# handlers file for haproxy
+- name: Restart HAProxy
+  ansible.builtin.service:
+    name: haproxy
+    state: restarted
+
+- name: Restart keepalived
+  ansible.builtin.service:
+    name: keepalived
+    state: restarted
+
+- name: Reload Firewalld
+  ansible.builtin.service:
+    name: firewalld
+    state: reloaded
